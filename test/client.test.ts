@@ -244,9 +244,9 @@ describe("NetBirdClient retries and non-idempotent POSTs", () => {
         fetchImpl,
       });
 
-      await expect(client.post("/api/setup-keys", { name: "ci-runner" })).rejects.toBeInstanceOf(
-        NetBirdApiError,
-      );
+      const err = await client.post("/api/setup-keys", { name: "ci-runner" }).catch((e) => e);
+      expect(err).toBeInstanceOf(NetBirdApiError);
+      expect(err.message).toContain("may have been processed");
       expect(fetchImpl).toHaveBeenCalledOnce();
       expect(created).toEqual(["key-1"]);
     });

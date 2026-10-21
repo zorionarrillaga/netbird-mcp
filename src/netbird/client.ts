@@ -192,6 +192,11 @@ export class NetBirdClient {
     // one. So a POST is retried only on 429 (rejected before processing). GET,
     // PUT (full replacement) and DELETE leave the same state when repeated.
     const idempotent = method !== "POST";
+    // When a POST is not retried, say so in the error, so a caller (or an agent)
+    // doesn't treat it as a definite failure and simply send it again.
+    const uncertain = idempotent
+      ? ""
+      : " (the request may have been processed; check before retrying)";
 
     if (outcome.kind === "error") {
       if (canRetry && idempotent) {
@@ -202,7 +207,7 @@ export class NetBirdClient {
         });
         return { action: "retry" };
       }
-      const msg = `Network error calling NetBird ${method} ${path}: ${(outcome.error as Error).message}`;
+      const msg = `Network error calling NetBird ${method} ${path}: ${(outcome.error as Error).message}${uncertain}`;
       return { action: "throw", error: new NetBirdApiError(msg, 0) };
     }
 
@@ -224,7 +229,7 @@ export class NetBirdClient {
     const parsed = text ? safeJson(text) : undefined;
     if (!res.ok) {
       const error = new NetBirdApiError(
-        `NetBird ${method} ${path} failed with ${res.status}`,
+        `NetBird ${method} ${path} failed with ${res.status}${res.status >= 500 ? uncertain : ""}`,
         res.status,
         parsed ?? text,
       );
