@@ -225,7 +225,15 @@ export class NetBirdClient {
       return { action: "retry" };
     }
 
-    const text = await res.text();
+    let text: string;
+    try {
+      text = await res.text();
+    } catch (err) {
+      // The headers arrived but the body was cut off. A POST may still have been
+      // processed, so keep the same warning.
+      const msg = `Network error reading NetBird ${method} ${path} response: ${(err as Error).message}${uncertain}`;
+      return { action: "throw", error: new NetBirdApiError(msg, 0) };
+    }
     const parsed = text ? safeJson(text) : undefined;
     if (!res.ok) {
       const error = new NetBirdApiError(

@@ -252,6 +252,22 @@ describe("NetBirdClient retries and non-idempotent POSTs", () => {
     });
   }
 
+  it("keeps the POST warning when the reply body is cut off", async () => {
+    const fetchImpl = vi.fn(async () => {
+      const body = new ReadableStream({
+        start(controller) {
+          controller.error(new TypeError("terminated: other side closed"));
+        },
+      });
+      return new Response(body, { status: 200, headers: { "content-type": "application/json" } });
+    }) as unknown as typeof fetch;
+
+    const err = await makeClient(fetchImpl).post("/api/setup-keys", { name: "ci-runner" }).catch((e) => e);
+    expect(err).toBeInstanceOf(NetBirdApiError);
+    expect(err.message).toContain("may have been processed");
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
   it("still retries a POST on 429, which the server rejected before processing", async () => {
     let calls = 0;
     const fetchImpl = vi.fn(async () => {
