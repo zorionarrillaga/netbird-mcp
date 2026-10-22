@@ -244,9 +244,9 @@ describe("NetBirdClient retries and non-idempotent POSTs", () => {
         fetchImpl,
       });
 
-      const err = await client.post("/api/setup-keys", { name: "ci-runner" }).catch((e) => e);
-      expect(err).toBeInstanceOf(NetBirdApiError);
-      expect(err.message).toContain("may have been processed");
+      const call = client.post("/api/setup-keys", { name: "ci-runner" });
+      await expect(call).rejects.toBeInstanceOf(NetBirdApiError);
+      await expect(call).rejects.toThrow("may have been processed");
       expect(fetchImpl).toHaveBeenCalledOnce();
       expect(created).toEqual(["key-1"]);
     });
@@ -262,9 +262,9 @@ describe("NetBirdClient retries and non-idempotent POSTs", () => {
       return new Response(body, { status: 200, headers: { "content-type": "application/json" } });
     }) as unknown as typeof fetch;
 
-    const err = await makeClient(fetchImpl).post("/api/setup-keys", { name: "ci-runner" }).catch((e) => e);
-    expect(err).toBeInstanceOf(NetBirdApiError);
-    expect(err.message).toContain("may have been processed");
+    const call = makeClient(fetchImpl).post("/api/setup-keys", { name: "ci-runner" });
+    await expect(call).rejects.toBeInstanceOf(NetBirdApiError);
+    await expect(call).rejects.toThrow("may have been processed");
     expect(fetchImpl).toHaveBeenCalledOnce();
   });
 
