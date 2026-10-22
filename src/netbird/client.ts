@@ -229,8 +229,17 @@ export class NetBirdClient {
     try {
       text = await res.text();
     } catch (err) {
-      // The headers arrived but the body was cut off. A POST may still have been
-      // processed, so keep the same warning.
+      // The headers arrived but the body was cut off. Idempotent methods retry like
+      // any other transport error; a POST may still have been processed, so it
+      // keeps the same warning instead.
+      if (canRetry && idempotent) {
+        await this.backoff(backoffMs(attempt), "netbird response cut off, retrying", {
+          method,
+          path,
+          attempt,
+        });
+        return { action: "retry" };
+      }
       const msg = `Network error reading NetBird ${method} ${path} response: ${(err as Error).message}${uncertain}`;
       return { action: "throw", error: new NetBirdApiError(msg, 0) };
     }
